@@ -1,4 +1,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { 
+  ListToolsRequestSchema,
+  CallToolRequestSchema 
+} from '@modelcontextprotocol/sdk/types.js';
 import { extractTool } from './tools/extract.js';
 import { insertTool } from './tools/insert.js';
 import { copyTool } from './tools/copy.js';
@@ -14,7 +18,7 @@ export function createServer(): Server {
   });
 
   // List available tools
-  server.setRequestHandler('tools/list', async () => {
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
         extractTool.definition,
@@ -25,23 +29,33 @@ export function createServer(): Server {
   });
 
   // Handle tool calls
-  server.setRequestHandler('tools/call', async (request) => {
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     
     try {
+      let result: any;
+      
       switch (name) {
         case 'extract-lines':
-          return await extractTool.execute(args);
+          result = await extractTool.execute(args);
+          break;
         
         case 'insert-at-line':
-          return await insertTool.execute(args);
+          result = await insertTool.execute(args);
+          break;
         
         case 'copy-lines':
-          return await copyTool.execute(args);
+          result = await copyTool.execute(args);
+          break;
         
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
+
+      // Return result in MCP format
+      return {
+        content: result.content
+      };
     } catch (error) {
       // Return error in MCP format
       return {
